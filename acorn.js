@@ -877,12 +877,18 @@
           skipLineComment(2);
         } else break;
       } else if (ch === 35 && input.charCodeAt(tokPos + 1) !== 33) { // '#' not followed by '!', a.k.a. codetag
-        var previous = input.charCodeAt(tokPos - 1);
-        // codetag only when '#' follows line terminators/whitespace (otherwise it's a BindMemberExpression token)
-        if (isLineTerminator(previous) || isWhiteSpace(previous) || ch === 0x3A) {
+        if (options.playground === false){
           skipCodeTag();
-        } else {
           break;
+        } else {
+          var previous = input.charCodeAt(tokPos - 1);
+          // codetag only when '#' follows line terminators/whitespace (otherwise it's a BindMemberExpression token)
+          //TODO: extend cases or force colon ':' for lookahead and proper BindMemberExpression handling
+          if (isLineTerminator(previous) || isWhiteSpace(previous) || ch === 0x3A) {
+            skipCodeTag();
+          } else {
+            break;
+          }
         }
       } else if (ch === 160) { // '\xa0'
         ++tokPos;
