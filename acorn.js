@@ -159,9 +159,9 @@
     }
     if (isArray(options.onComment)) {
       var comments = options.onComment;
-      options.onComment = function (block, text, start, end, startLoc, endLoc) {
+      options.onComment = function (type, text, start, end, startLoc, endLoc) {
         var comment = {
-          type: block ? 'Block' : 'Line',
+          type: type,
           value: text,
           start: start,
           end: end
@@ -756,6 +756,48 @@
     if (!preserveSpace) skipSpace();
   }
 
+  function skipCodeTag() {
+    var startLoc = options.onComment && options.locations && curPosition();
+    var start = tokPos;
+    var nested = 0, ch, end, index = 0;
+    while (tokPos+index < inputLen) {
+      ch = input.charCodeAt(tokPos+index);
+      ++index;
+      //TODO: support nested escaped brackets, strings, etc
+      if (ch === 0x28) {
+        ++nested;
+      } else if (ch === 0x29) {
+        --nested;
+      }
+      if (nested === 0 &&
+        (isLineTerminator(ch) || isWhiteSpace(ch) || ch === 0x3A)) { // line/whitespace or colon (code tag close)
+        tokPos += index;
+        end = tokPos-1;
+        if (options.locations) {
+          lineBreak.lastIndex = start;
+          var match;
+          while ((match = lineBreak.exec(input)) && match.index < tokPos) {
+            ++tokCurLine;
+            tokLineStart = match.index + match[0].length;
+          }
+        }
+        if (options.onComment)
+          options.onComment('Tag', input.slice(start + 1, end).replace(/\n|\r/gi,''), start, tokPos,
+            startLoc, options.locations && curPosition());
+        return;
+      }
+    }
+  }
+
+  function isWhiteSpace(ch){
+    return ((ch === 0x20) || (ch === 0x09) || (ch === 0x0B) || (ch === 0x0C) || (ch === 0xA0) ||
+    (ch >= 0x1680 && [0x1680, 0x180E, 0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200A, 0x202F, 0x205F, 0x3000, 0xFEFF].indexOf(ch) >= 0));
+  }
+
+  function isLineTerminator(ch){
+    return ((ch === 0x0A) || (ch === 0x0D) || (ch === 0x2028) || (ch === 0x2029));
+  }
+
   function skipBlockComment() {
     var startLoc = options.onComment && options.locations && curPosition();
     var start = tokPos, end = input.indexOf("*/", tokPos += 2);
@@ -769,9 +811,16 @@
         tokLineStart = match.index + match[0].length;
       }
     }
-    if (options.onComment)
-      options.onComment(true, input.slice(start + 2, end), start, tokPos,
-                        startLoc, options.locations && curPosition());
+    if (options.onComment) {
+      if (input.charCodeAt(start + 2) === 35) {
+        if(input.charCodeAt(end) === 0x3A) --end;
+        options.onComment('Tag', input.slice(start + 3, end), start, tokPos,
+          startLoc, options.locations && curPosition());
+      } else {
+        options.onComment('Block', input.slice(start + 2, end), start, tokPos,
+          startLoc, options.locations && curPosition());
+      }
+    }
   }
 
   function skipLineComment(startSkip) {
@@ -782,9 +831,16 @@
       ++tokPos;
       ch = input.charCodeAt(tokPos);
     }
-    if (options.onComment)
-      options.onComment(false, input.slice(start + startSkip, tokPos), start, tokPos,
-                        startLoc, options.locations && curPosition());
+    if (options.onComment) {
+      if (input.charCodeAt(start + startSkip) === 35) {
+        if(input.charCodeAt(end) === 0x3A) --end;
+        options.onComment('Tag', input.slice(start + startSkip + 1, end), start, tokPos,
+          startLoc, options.locations && curPosition());
+      } else {
+        options.onComment('Line', input.slice(start + startSkip, tokPos), start, tokPos,
+          startLoc, options.locations && curPosition());
+      }
+    }
   }
 
   // Called at the start of the parse and after every token. Skips
@@ -820,6 +876,14 @@
         } else if (next === 47) { // '/'
           skipLineComment(2);
         } else break;
+      } else if (ch === 35 && input.charCodeAt(tokPos + 1) !== 33) { // '#' not followed by '!', a.k.a. codetag
+        var previous = input.charCodeAt(tokPos - 1);
+        // codetag only when '#' follows line terminators/whitespace (otherwise it's a BindMemberExpression token)
+        if (isLineTerminator(previous) || isWhiteSpace(previous) || ch === 0x3A) {
+          skipCodeTag();
+        } else {
+          break;
+        }
       } else if (ch === 160) { // '\xa0'
         ++tokPos;
       } else if (ch >= 5760 && nonASCIIwhitespace.test(String.fromCharCode(ch))) {
@@ -4821,3 +4885,4 @@
     return ident;
   }
 });
+
