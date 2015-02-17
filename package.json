@@ -25,7 +25,7 @@
       "web": "http://sebmck.com"
     }
   ],
-  "repository": "https://github.com/babel/acorn-babel",
+  "repository": "https://github.com/marcominetti/acorn-babel/tree/codetag",
   "licenses": [
     {
       "type": "MIT",
