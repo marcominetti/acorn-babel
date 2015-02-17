@@ -1,9 +1,14 @@
 {
-  "name": "acorn-babel",
-  "description": "Acorn fork used by babel",
+  "name": "acorn-babel-codetag",
+  "description": "Acorn fork used by babel with codetag support",
   "main": "acorn_csp.js",
   "version": "0.11.1-32",
   "maintainers": [
+    {
+      "name": "Marco Minetti",
+      "email": "marco.minetti@novetica.org",
+      "web": "http://marcominetti.net"
+    },
     {
       "name": "Marijn Haverbeke",
       "email": "marijnh@gmail.com",
