@@ -1,8 +1,8 @@
 {
   "name": "acorn-babel-codetag",
   "description": "Acorn fork used by babel with codetag support",
-  "main": "acorn_csp.js",
-  "version": "0.11.1-33",
+  "main": "acorn.js",
+  "version": "0.11.2",
   "maintainers": [
     {
       "name": "Marco Minetti",
